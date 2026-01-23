@@ -1,59 +1,339 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PHP_Laravel12_Nightwatch
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Overview
 
-## About Laravel
+**PHP_Laravel12_Nightwatch** is a Laravel 12 application integrated with **Laravel Nightwatch**, the official monitoring and observability platform by Laravel. This project demonstrates a complete, production-ready setup for tracking application logs, exceptions, commands, jobs, and performance metrics using Nightwatch.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Nightwatch is designed primarily for **production environments** and real server traffic. While it can be installed locally for testing logs and exceptions, request metrics are best observed after deployment to a public server.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Features
 
-## Learning Laravel
+* Laravel 12 application setup
+* Laravel Nightwatch integration
+* Centralized log monitoring
+* Exception and error tracking
+* Background agent-based data ingestion
+* Configurable sampling rates
+* Secure token-based environment configuration
+* Production-ready logging setup
+* Works with Nginx / Apache / VPS / Docker
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Folder Structure
 
-## Laravel Sponsors
+```
+PHP_Laravel12_Nightwatch/
+├── app/                # Application core logic
+├── bootstrap/          # Framework bootstrapping
+├── config/             # Configuration files (nightwatch.php, logging.php, etc.)
+├── database/           # Migrations, factories, seeders
+├── public/             # Public entry point (index.php)
+├── resources/          # Views, assets, frontend files
+├── routes/             # Web and API routes
+├── storage/            # Logs, cache, compiled views
+├── tests/              # Application tests
+├── vendor/             # Composer dependencies
+├── .env                # Environment configuration
+├── artisan             # Artisan CLI
+└── composer.json       # Project dependencies
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## System Requirements
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+* PHP 8.2 or higher
+* Composer (latest version)
+* MySQL / MariaDB
+* Node.js (optional but recommended)
+* Apache / Nginx / XAMPP (for local)
+* Internet connection
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## STEP 1: Create a New Laravel 12 Project
 
-## Code of Conduct
+Run the following command:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+composer create-project laravel/laravel laravel-nightwatch
+```
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## STEP 2: Environment Configuration (.env)
 
-## License
+Open the `.env` file and set basic app values:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```env
+APP_NAME=Laravel
+APP_ENV=production
+APP_KEY=Your_Key
+APP_DEBUG=false
+APP_URL=http://localhost
+```
+
+Generate application key:
+
+```bash
+php artisan key:generate
+```
+
+---
+
+## STEP 3: Database Configuration
+
+Update database credentials in `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Run migrations:
+
+```bash
+php artisan migrate
+```
+
+---
+
+## STEP 4: Run Laravel Development Server
+
+```bash
+php artisan serve
+```
+
+Open in browser:
+
+```
+http://127.0.0.1:8000
+```
+
+---
+
+## STEP 5: Create Nightwatch Account & Application
+
+1. Visit [https://nightwatch.laravel.com](https://nightwatch.laravel.com)
+
+2. Login / Sign up
+
+3. Create Organization
+
+   * Name: Laravel Ecommerce
+   * Type: Individual
+
+     <img width="620" height="759" alt="Screenshot 2026-01-23 123156" src="https://github.com/user-attachments/assets/17bca71c-7906-4832-ae96-525f56f8bfd2" />
+
+
+4. Create Application
+
+   * Application Name: Laravel Project
+   * Storage Region: Europe / US (Asia not required)
+
+5. Create Environment
+
+   * Name: Production
+   * Environment URL: [http://localhost](http://localhost) (optional)
+
+     <img width="634" height="828" alt="Screenshot 2026-01-23 123703" src="https://github.com/user-attachments/assets/c0c9c95d-ca60-47de-8c67-01d1f9acd117" />
+
+     <img width="629" height="692" alt="Screenshot 2026-01-23 123730" src="https://github.com/user-attachments/assets/95794e3b-af9c-41f4-9b0e-c6bc69efbfa4" />
+
+     <img width="637" height="601" alt="Screenshot 2026-01-23 123828" src="https://github.com/user-attachments/assets/620ee879-ef98-4ecf-806b-caf362d09796" />
+
+     <img width="618" height="503" alt="Screenshot 2026-01-23 123916" src="https://github.com/user-attachments/assets/e4d47efe-18e5-43cf-b567-083ccb10775c" />
+
+     Dashboard:-
+     
+     <img width="1919" height="908" alt="Screenshot 2026-01-23 134729" src="https://github.com/user-attachments/assets/c1d5965e-afe7-4e9e-8313-9ef12e59ced7" />
+
+
+
+---
+
+## STEP 6: Install Nightwatch Package
+
+Install the official package:
+
+```bash
+composer require laravel/nightwatch
+```
+
+Verify installation:
+
+```bash
+composer show laravel/nightwatch
+```
+
+---
+
+## STEP 7: Add Nightwatch Token
+
+Copy the Environment Token from Nightwatch dashboard and add it to `.env`:
+
+```env
+NIGHTWATCH_TOKEN=aoYTc1WFwsGfOkdeGijBYRIo4VeBXCzf3phMt3Xf7zSA
+NIGHTWATCH_ENABLED=true
+NIGHTWATCH_ENV=local
+NIGHTWATCH_REQUEST_SAMPLE_RATE=0.1
+```
+
+---
+
+## STEP 8: Logging Configuration (IMPORTANT)
+
+Nightwatch requires proper log configuration.
+
+Add this to `.env`:
+
+```env
+LOG_LEVEL=debug
+LOG_CHANNEL=stack
+LOG_STACK=single,nightwatch
+```
+
+This ensures:
+
+• Logs are stored locally
+• Logs are also sent to Nightwatch
+
+---
+
+## STEP 9: Nightwatch Configuration File
+
+Open `config/nightwatch.php` and ensure Nightwatch is enabled:
+
+```php
+<?php
+
+return [
+    'enabled' => env('NIGHTWATCH_ENABLED', true),
+    'token' => env('NIGHTWATCH_TOKEN'),
+    'deployment' => env('NIGHTWATCH_DEPLOY'),
+    'server' => env('NIGHTWATCH_SERVER', (string) gethostname()),
+    'capture_exception_source_code' => env('NIGHTWATCH_CAPTURE_EXCEPTION_SOURCE_CODE', true),
+    'capture_request_payload' => env('NIGHTWATCH_CAPTURE_REQUEST_PAYLOAD', false),
+    'redact_payload_fields' => explode(',', env('NIGHTWATCH_REDACT_PAYLOAD_FIELDS', '_token,password,password_confirmation')),
+    'redact_headers' => explode(',', env('NIGHTWATCH_REDACT_HEADERS', 'Authorization,Cookie,Proxy-Authorization,X-XSRF-TOKEN')),
+
+    'sampling' => [
+        'requests' => env('NIGHTWATCH_REQUEST_SAMPLE_RATE', 1.0),
+        'commands' => env('NIGHTWATCH_COMMAND_SAMPLE_RATE', 1.0),
+        'exceptions' => env('NIGHTWATCH_EXCEPTION_SAMPLE_RATE', 1.0),
+        'scheduled_tasks' => env('NIGHTWATCH_SCHEDULED_TASK_SAMPLE_RATE', 1.0),
+    ],
+
+    'filtering' => [
+        'ignore_cache_events' => env('NIGHTWATCH_IGNORE_CACHE_EVENTS', false),
+        'ignore_mail' => env('NIGHTWATCH_IGNORE_MAIL', false),
+        'ignore_notifications' => env('NIGHTWATCH_IGNORE_NOTIFICATIONS', false),
+        'ignore_outgoing_requests' => env('NIGHTWATCH_IGNORE_OUTGOING_REQUESTS', false),
+        'ignore_queries' => env('NIGHTWATCH_IGNORE_QUERIES', false),
+        'log_level' => env('NIGHTWATCH_LOG_LEVEL', env('LOG_LEVEL', 'debug')),
+    ],
+
+    'ingest' => [
+        'uri' => env('NIGHTWATCH_INGEST_URI', '127.0.0.1:2407'),
+        'timeout' => env('NIGHTWATCH_INGEST_TIMEOUT', 0.5),
+        'connection_timeout' => env('NIGHTWATCH_INGEST_CONNECTION_TIMEOUT', 0.5),
+        'event_buffer' => env('NIGHTWATCH_INGEST_EVENT_BUFFER', 500),
+    ],
+];
+```
+
+---
+
+## STEP 10: Run Nightwatch Agent
+
+This must run in a separate terminal:
+
+```bash
+php artisan nightwatch:agent
+```
+
+Expected output:
+
+```
+Nightwatch agent initiated
+Authentication successful
+```
+
+---
+
+## STEP 11: Test Request Monitoring (Local)
+
+Add this route in `routes/web.php`:
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+Route::get('/test-request', function () {
+    sleep(1);
+    return 'Request OK';
+});
+```
+
+Open in browser:
+
+```
+http://127.0.0.1:8000/test-request
+```
+
+ Nightwatch Dashboard → Exceptions / Logs
+The event will appear within **10–30 seconds**
+
+---
+
+## STEP 12: Why Requests Are Not Visible Locally (IMPORTANT)
+
+ On Localhost:
+
+* HTTP Requests will NOT appear
+* This is expected behavior
+
+Nightwatch is designed for:
+
+*   Production servers
+*	VPS / Cloud server
+*	Nginx + PHP-FPM
+*	Laravel Forge / Vapor
+*	Public traffic
+
+
+ Requests appear only when:
+
+* App is deployed on a real server
+* Public traffic is received
+
+For local request debugging, **Laravel Telescope** is recommended.
+
+---
+
+## STEP 13: Production Deployment (Short Overview)
+
+To see request metrics:
+
+1. Deploy project to a VPS (AWS / DigitalOcean / etc.)
+2. Use Nginx + PHP-FPM
+3. Update `.env`:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+```
+
+4. Run Nightwatch agent in background
+5. Requests will start appearing in the dashboard
+
+---
+
