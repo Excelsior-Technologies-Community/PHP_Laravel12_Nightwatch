@@ -1,5 +1,36 @@
 # PHP_Laravel12_Nightwatch
 
+<p align="center">
+  <a href="https://nightwatch.laravel.com">
+    <img src="https://img.shields.io/badge/Laravel-Nightwatch-red?style=flat&logo=laravel" alt="Laravel Nightwatch">
+  </a>
+
+  <a href="https://packagist.org/packages/laravel/framework">
+    <img src="https://img.shields.io/badge/Laravel-12.x-brightgreen" alt="Laravel Version">
+  </a>
+
+  <a href="https://packagist.org/packages/laravel/nightwatch">
+    <img src="https://img.shields.io/packagist/v/laravel/nightwatch" alt="Nightwatch Version">
+  </a>
+
+  <a href="https://packagist.org/packages/laravel/nightwatch">
+    <img src="https://img.shields.io/packagist/dt/laravel/nightwatch" alt="Nightwatch Downloads">
+  </a>
+
+  <a href="#">
+    <img src="https://img.shields.io/badge/Monitoring-Production--Ready-blue" alt="Monitoring Status">
+  </a>
+
+  <a href="#">
+    <img src="https://img.shields.io/badge/PHP-8.2+-purple" alt="PHP Version">
+  </a>
+
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  </a>
+</p>
+
+
 ## Overview
 
 **PHP_Laravel12_Nightwatch** is a Laravel 12 application integrated with **Laravel Nightwatch**, the official monitoring and observability platform by Laravel. This project demonstrates a complete, production-ready setup for tracking application logs, exceptions, commands, jobs, and performance metrics using Nightwatch.
