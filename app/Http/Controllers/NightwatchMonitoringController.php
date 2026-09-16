@@ -3,56 +3,98 @@
 namespace App\Http\Controllers;
 
 use App\Models\PerformanceMetric;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class NightwatchMonitoringController extends Controller
 {
     /**
-     * Nightwatch monitoring dashboard.
+     * Nightwatch dashboard.
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        $logFile = storage_path('logs/laravel.log');
+        $range = $this->normalizeRange(
+            $request->input('range', 'all')
+        );
 
-        $logs = $this->readLogEntries($logFile);
+        /*
+        |--------------------------------------------------------------------------
+        | Application Logs
+        |--------------------------------------------------------------------------
+        */
 
-        $totalLogs = count($logs);
+        $logs = collect(
+            $this->readLogEntries(
+                storage_path('logs/laravel.log')
+            )
+        );
 
-        $errorLogs = collect($logs)
-            ->whereIn('level', ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'])
+        $logs = $this->filterLogsByRange($logs, $range);
+
+        $totalLogs = $logs->count();
+
+        $errorLogs = $logs
+            ->where('level', 'error')
             ->count();
 
-        $warningLogs = collect($logs)
-            ->where('level', 'WARNING')
+        $warningLogs = $logs
+            ->where('level', 'warning')
             ->count();
 
-        $infoLogs = collect($logs)
-            ->where('level', 'INFO')
+        $infoLogs = $logs
+            ->where('level', 'info')
             ->count();
 
-        $debugLogs = collect($logs)
-            ->where('level', 'DEBUG')
+        $debugLogs = $logs
+            ->where('level', 'debug')
             ->count();
 
-        $recentErrors = collect($logs)
-            ->whereIn('level', ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'])
+        $recentErrors = $logs
+            ->where('level', 'error')
             ->take(5)
             ->values();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Application Health
+        |--------------------------------------------------------------------------
+        */
 
         $health = [
             'application' => true,
             'database' => $this->checkDatabase(),
             'cache' => $this->checkCache(),
             'storage' => $this->checkStorage(),
-            'nightwatch' => (bool) config('nightwatch.enabled'),
+            'nightwatch' => config('nightwatch.enabled', true),
         ];
 
-        $healthCount = collect($health)->filter()->count();
+        $healthCount = collect($health)
+            ->filter()
+            ->count();
+
         $healthTotal = count($health);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Performance Query
+        |--------------------------------------------------------------------------
+        */
+
+        $performanceQuery = PerformanceMetric::query();
+
+        $this->applyDateRange(
+            $performanceQuery,
+            $range
+        );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -60,195 +102,345 @@ class NightwatchMonitoringController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $performanceTotal = PerformanceMetric::count();
+        $performanceTotal = (clone $performanceQuery)
+            ->count();
 
-        $performanceAverage = PerformanceMetric::avg('duration_ms') ?? 0;
+        $performanceAverage = (clone $performanceQuery)
+            ->avg('duration_ms') ?? 0;
 
-        $performanceMaximum = PerformanceMetric::max('duration_ms') ?? 0;
+        $performanceMax = (clone $performanceQuery)
+            ->max('duration_ms') ?? 0;
 
-        $performanceSlow = PerformanceMetric::where(
-            'category',
-            'SLOW'
-        )->count();
+        $performanceMin = (clone $performanceQuery)
+            ->min('duration_ms') ?? 0;
 
-        $performanceCritical = PerformanceMetric::where(
-            'category',
-            'CRITICAL'
-        )->count();
+        $slowRequests = (clone $performanceQuery)
+            ->where('category', 'SLOW')
+            ->count();
 
-        $recentPerformance = PerformanceMetric::latest()
+        $criticalRequests = (clone $performanceQuery)
+            ->where('category', 'CRITICAL')
+            ->count();
+
+        $fastRequests = (clone $performanceQuery)
+            ->where('category', 'FAST')
+            ->count();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Recent Performance
+        |--------------------------------------------------------------------------
+        */
+
+        $recentPerformance = (clone $performanceQuery)
+            ->latest('created_at')
             ->take(5)
             ->get();
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Top Requested URLs
+        |--------------------------------------------------------------------------
+        */
+
+        $topUrls = (clone $performanceQuery)
+            ->select(
+                'path',
+                DB::raw('COUNT(*) as requests'),
+                DB::raw('AVG(duration_ms) as avg_duration')
+            )
+            ->whereNotNull('path')
+            ->groupBy('path')
+            ->orderByDesc('requests')
+            ->take(5)
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Slowest Requests
+        |--------------------------------------------------------------------------
+        */
+
+        $slowestRequests = (clone $performanceQuery)
+            ->orderByDesc('duration_ms')
+            ->take(5)
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | HTTP Status Distribution
+        |--------------------------------------------------------------------------
+        */
+
+        $statusDistribution = [
+            '2xx' => (clone $performanceQuery)
+                ->whereBetween('status_code', [200, 299])
+                ->count(),
+
+            '3xx' => (clone $performanceQuery)
+                ->whereBetween('status_code', [300, 399])
+                ->count(),
+
+            '4xx' => (clone $performanceQuery)
+                ->whereBetween('status_code', [400, 499])
+                ->count(),
+
+            '5xx' => (clone $performanceQuery)
+                ->whereBetween('status_code', [500, 599])
+                ->count(),
+        ];
+
+        $statusTotal = array_sum($statusDistribution);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return Dashboard
+        |--------------------------------------------------------------------------
+        */
+
         return view('nightwatch.dashboard', compact(
+            'range',
+
             'totalLogs',
             'errorLogs',
             'warningLogs',
             'infoLogs',
             'debugLogs',
             'recentErrors',
+
             'health',
             'healthCount',
             'healthTotal',
+
             'performanceTotal',
             'performanceAverage',
-            'performanceMaximum',
-            'performanceSlow',
-            'performanceCritical',
-            'recentPerformance'
+            'performanceMax',
+            'performanceMin',
+
+            'slowRequests',
+            'criticalRequests',
+            'fastRequests',
+
+            'recentPerformance',
+
+            'topUrls',
+            'slowestRequests',
+
+            'statusDistribution',
+            'statusTotal'
         ));
     }
 
+
     /**
-     * Display application logs.
+     * Nightwatch logs page.
      */
-    public function logs()
+    public function logs(Request $request)
     {
-        $logFile = storage_path('logs/laravel.log');
+        $logs = $this->filteredLogEntries($request);
 
-        $logs = $this->readLogEntries($logFile);
+        $search = trim(
+            (string) $request->input('search', '')
+        );
 
-        $search = request('search');
-        $level = request('level');
-        $date = request('date');
+        $level = $request->input('level', '');
 
-        $filteredLogs = collect($logs);
+        $date = $request->input('date', '');
 
-        if ($search) {
-            $search = strtolower($search);
+        $range = $this->normalizeRange(
+            $request->input('range', 'all')
+        );
 
-            $filteredLogs = $filteredLogs->filter(function ($log) use ($search) {
-                return str_contains(
-                    strtolower($log['message']),
-                    $search
-                );
-            });
-        }
+        $totalLogs = $logs->count();
 
-        if ($level && $level !== 'ALL') {
-            $filteredLogs = $filteredLogs->filter(function ($log) use ($level) {
-                return $log['level'] === $level;
-            });
-        }
-
-        if ($date) {
-            $filteredLogs = $filteredLogs->filter(function ($log) use ($date) {
-                return str_starts_with($log['date'], $date);
-            });
-        }
-
-        $filteredLogs = $filteredLogs->values();
-
-        return view('nightwatch.logs', [
-            'logs' => $filteredLogs,
-            'totalLogs' => $filteredLogs->count(),
-            'search' => $search,
-            'level' => $level,
-            'date' => $date,
-        ]);
+        return view(
+            'nightwatch.logs',
+            compact(
+                'logs',
+                'totalLogs',
+                'search',
+                'level',
+                'date',
+                'range'
+            )
+        );
     }
 
+
     /**
-     * Generate an informational log.
+     * Export application logs as CSV.
+     */
+    public function exportLogs(Request $request): StreamedResponse
+    {
+        $logs = $this->filteredLogEntries($request);
+
+        $filename =
+            'nightwatch_logs_' .
+            now()->format('Y_m_d_H_i_s') .
+            '.csv';
+
+        return response()->streamDownload(
+            function () use ($logs) {
+
+                $handle = fopen('php://output', 'w');
+
+                fputcsv($handle, [
+                    'Date & Time',
+                    'Level',
+                    'Message',
+                ]);
+
+                foreach ($logs as $log) {
+
+                    fputcsv($handle, [
+                        $log['datetime'] ?? '',
+                        strtoupper($log['level'] ?? ''),
+                        $log['message'] ?? '',
+                    ]);
+                }
+
+                fclose($handle);
+            },
+            $filename,
+            [
+                'Content-Type' => 'text/csv',
+            ]
+        );
+    }
+
+
+    /**
+     * Generate information log.
      */
     public function generateInfo()
     {
-        Log::info('Nightwatch test information log generated successfully.', [
-            'source' => 'Nightwatch Monitoring Dashboard',
-            'action' => 'info_test',
-            'timestamp' => now()->toDateTimeString(),
-        ]);
+        Log::info(
+            'Nightwatch test information log generated.',
+            [
+                'source' => 'Nightwatch Dashboard',
+                'timestamp' => now()->toDateTimeString(),
+            ]
+        );
 
         return redirect()
             ->route('nightwatch.dashboard')
-            ->with('success', 'INFO log generated successfully.');
+            ->with(
+                'success',
+                'Information log generated successfully.'
+            );
     }
 
+
     /**
-     * Generate a warning log.
+     * Generate warning log.
      */
     public function generateWarning()
     {
-        Log::warning('Nightwatch test warning generated.', [
-            'source' => 'Nightwatch Monitoring Dashboard',
-            'action' => 'warning_test',
-            'timestamp' => now()->toDateTimeString(),
-        ]);
+        Log::warning(
+            'Nightwatch test warning log generated.',
+            [
+                'source' => 'Nightwatch Dashboard',
+                'timestamp' => now()->toDateTimeString(),
+            ]
+        );
 
         return redirect()
             ->route('nightwatch.dashboard')
-            ->with('success', 'WARNING log generated successfully.');
+            ->with(
+                'success',
+                'Warning log generated successfully.'
+            );
     }
 
+
     /**
-     * Generate a test exception.
+     * Generate exception log.
      */
     public function generateException()
     {
         try {
-            throw new \RuntimeException(
-                'Nightwatch test exception: simulated application failure.'
+
+            throw new \Exception(
+                'Nightwatch test exception generated.'
             );
+
         } catch (Throwable $exception) {
-            Log::error('Nightwatch test exception captured.', [
-                'exception' => get_class($exception),
-                'message' => $exception->getMessage(),
-                'file' => $exception->getFile(),
-                'line' => $exception->getLine(),
-                'timestamp' => now()->toDateTimeString(),
-            ]);
+
+            Log::error(
+                'Nightwatch test exception generated.',
+                [
+                    'exception' => $exception->getMessage(),
+                    'file' => $exception->getFile(),
+                    'line' => $exception->getLine(),
+                ]
+            );
         }
 
         return redirect()
             ->route('nightwatch.dashboard')
             ->with(
                 'success',
-                'Test exception generated and logged successfully.'
+                'Exception log generated successfully.'
             );
     }
 
+
     /**
-     * Generate multiple monitoring events.
+     * Generate all test logs.
      */
     public function generateTestLogs()
     {
-        Log::debug('Nightwatch DEBUG test event.', [
-            'source' => 'monitoring_test',
-        ]);
+        Log::debug(
+            'Nightwatch test debug log generated.'
+        );
 
-        Log::info('Nightwatch INFO test event.', [
-            'source' => 'monitoring_test',
-        ]);
+        Log::info(
+            'Nightwatch test information log generated.'
+        );
 
-        Log::warning('Nightwatch WARNING test event.', [
-            'source' => 'monitoring_test',
-        ]);
+        Log::notice(
+            'Nightwatch test notice log generated.'
+        );
 
-        Log::error('Nightwatch ERROR test event.', [
-            'source' => 'monitoring_test',
-        ]);
+        Log::warning(
+            'Nightwatch test warning log generated.'
+        );
+
+        Log::error(
+            'Nightwatch test error log generated.'
+        );
 
         return redirect()
             ->route('nightwatch.dashboard')
             ->with(
                 'success',
-                'Multiple test monitoring events generated.'
+                'All test logs generated successfully.'
             );
     }
 
+
     /**
-     * Check database connectivity.
+     * Check database connection.
      */
     private function checkDatabase(): bool
     {
         try {
+
             DB::connection()->getPdo();
 
             return true;
-        } catch (Throwable $exception) {
+
+        } catch (Throwable $e) {
+
             return false;
         }
     }
+
 
     /**
      * Check cache.
@@ -256,15 +448,23 @@ class NightwatchMonitoringController extends Controller
     private function checkCache(): bool
     {
         try {
+
             $key = 'nightwatch_health_check';
 
-            Cache::put($key, true, 10);
+            Cache::put(
+                $key,
+                true,
+                now()->addMinutes(1)
+            );
 
             return Cache::get($key) === true;
-        } catch (Throwable $exception) {
+
+        } catch (Throwable $e) {
+
             return false;
         }
     }
+
 
     /**
      * Check storage.
@@ -272,34 +472,36 @@ class NightwatchMonitoringController extends Controller
     private function checkStorage(): bool
     {
         try {
+
             return Storage::disk('local')->put(
                 'nightwatch-health-check.txt',
-                'Nightwatch storage health check'
+                'Nightwatch health check'
             );
-        } catch (Throwable $exception) {
+
+        } catch (Throwable $e) {
+
             return false;
         }
     }
 
+
     /**
-     * Read and parse Laravel log file.
+     * Read Laravel log entries.
      */
-    private function readLogEntries(string $file): array
+    private function readLogEntries(string $logFile): array
     {
-        if (!file_exists($file)) {
+        if (!file_exists($logFile)) {
             return [];
         }
 
-        $content = file_get_contents($file);
+        $content = file_get_contents($logFile);
 
-        if (!$content) {
+        if ($content === false || trim($content) === '') {
             return [];
         }
-
-        $pattern = '/^\[(.*?)\]\s+(\w+)\.(\w+):\s*(.*?)(?=\n\[|\z)/ms';
 
         preg_match_all(
-            $pattern,
+            '/^\[(.*?)\]\s+(\w+)\.(\w+):\s*(.*?)(?=\n\[|\z)/ms',
             $content,
             $matches,
             PREG_SET_ORDER
@@ -308,14 +510,249 @@ class NightwatchMonitoringController extends Controller
         $logs = [];
 
         foreach ($matches as $match) {
+
+            $datetime = $match[1] ?? '';
+
+            $level = strtolower(
+                $match[3] ?? 'info'
+            );
+
+            $message = trim(
+                $match[4] ?? ''
+            );
+
             $logs[] = [
-                'datetime' => $match[1],
-                'date' => substr($match[1], 0, 10),
-                'level' => strtoupper($match[3]),
-                'message' => trim($match[4]),
+                'datetime' => $datetime,
+                'date' => substr($datetime, 0, 10),
+                'level' => $level,
+                'message' => $message,
             ];
         }
 
         return array_reverse($logs);
+    }
+
+
+    /**
+     * Filter logs according to search, level, date and range.
+     */
+    private function filteredLogEntries(Request $request): Collection
+    {
+        $logs = collect(
+            $this->readLogEntries(
+                storage_path('logs/laravel.log')
+            )
+        );
+
+        $search = trim(
+            (string) $request->input('search', '')
+        );
+
+        $level = strtolower(
+            trim(
+                (string) $request->input('level', '')
+            )
+        );
+
+        $date = trim(
+            (string) $request->input('date', '')
+        );
+
+        $range = $this->normalizeRange(
+            $request->input('range', 'all')
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
+        if ($search !== '') {
+
+            $needle = strtolower($search);
+
+            $logs = $logs->filter(function ($log) use ($needle) {
+
+                return str_contains(
+                    strtolower(
+                        (string) ($log['message'] ?? '')
+                    ),
+                    $needle
+                );
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Level
+        |--------------------------------------------------------------------------
+        */
+
+        if ($level !== '') {
+
+            $logs = $logs->filter(function ($log) use ($level) {
+
+                return strtolower(
+                    (string) ($log['level'] ?? '')
+                ) === $level;
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Exact Date
+        |--------------------------------------------------------------------------
+        */
+
+        if ($date !== '') {
+
+            $logs = $logs->filter(function ($log) use ($date) {
+
+                return ($log['date'] ?? '') === $date;
+            });
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Date Range
+            |--------------------------------------------------------------------------
+            */
+
+            $logs = $this->filterLogsByRange(
+                $logs,
+                $range
+            );
+        }
+
+
+        return $logs->values();
+    }
+
+
+    /**
+     * Filter logs by date range.
+     */
+    private function filterLogsByRange(
+        Collection $logs,
+        string $range
+    ): Collection {
+
+        if ($range === 'all') {
+            return $logs;
+        }
+
+        [$start, $end] = $this->resolveDateRange($range);
+
+        if (!$start || !$end) {
+            return $logs;
+        }
+
+        $startDate = $start->toDateString();
+        $endDate = $end->toDateString();
+
+        return $logs->filter(function ($log) use (
+            $startDate,
+            $endDate
+        ) {
+
+            $logDate = $log['date'] ?? '';
+
+            return $logDate >= $startDate
+                && $logDate <= $endDate;
+        })->values();
+    }
+
+
+    /**
+     * Apply performance date range.
+     */
+    private function applyDateRange(
+        $query,
+        string $range
+    ): void {
+
+        if ($range === 'all') {
+            return;
+        }
+
+        [$start, $end] = $this->resolveDateRange($range);
+
+        if ($start && $end) {
+
+            $query->whereBetween(
+                'created_at',
+                [
+                    $start,
+                    $end,
+                ]
+            );
+        }
+    }
+
+
+    /**
+     * Resolve selected date range.
+     */
+    private function resolveDateRange(
+        string $range
+    ): array {
+
+        $now = now();
+
+        return match ($range) {
+
+            'today' => [
+                $now->copy()->startOfDay(),
+                $now->copy()->endOfDay(),
+            ],
+
+            '7' => [
+                $now->copy()
+                    ->subDays(6)
+                    ->startOfDay(),
+
+                $now->copy()->endOfDay(),
+            ],
+
+            '30' => [
+                $now->copy()
+                    ->subDays(29)
+                    ->startOfDay(),
+
+                $now->copy()->endOfDay(),
+            ],
+
+            default => [
+                null,
+                null,
+            ],
+        };
+    }
+
+
+    /**
+     * Normalize date range.
+     */
+    private function normalizeRange(
+        ?string $range
+    ): string {
+
+        return in_array(
+            $range,
+            [
+                'today',
+                '7',
+                '30',
+                'all',
+            ],
+            true
+        )
+            ? $range
+            : 'all';
     }
 }

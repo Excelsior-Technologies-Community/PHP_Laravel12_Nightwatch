@@ -55,6 +55,10 @@
             padding: 7px 10px;
         }
 
+        .range-btn {
+            min-width: 100px;
+        }
+
     </style>
 
 </head>
@@ -119,8 +123,54 @@
         </h2>
 
         <p class="text-muted mb-0">
-            Monitor request execution time, memory usage, and slow application operations.
+            Monitor request execution time, memory usage and application performance.
         </p>
+
+    </div>
+
+    <!-- Date Range -->
+
+    <div class="card main-card mb-4">
+
+        <div class="card-body">
+
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+
+                <strong class="me-2">
+                    📅 Date Range:
+                </strong>
+
+                <a
+                    href="{{ route('nightwatch.performance', array_merge(request()->except('range'), ['range' => 'today'])) }}"
+                    class="btn range-btn {{ $range === 'today' ? 'btn-primary' : 'btn-outline-primary' }}"
+                >
+                    Today
+                </a>
+
+                <a
+                    href="{{ route('nightwatch.performance', array_merge(request()->except('range'), ['range' => '7days'])) }}"
+                    class="btn range-btn {{ $range === '7days' ? 'btn-primary' : 'btn-outline-primary' }}"
+                >
+                    7 Days
+                </a>
+
+                <a
+                    href="{{ route('nightwatch.performance', array_merge(request()->except('range'), ['range' => '30days'])) }}"
+                    class="btn range-btn {{ $range === '30days' ? 'btn-primary' : 'btn-outline-primary' }}"
+                >
+                    30 Days
+                </a>
+
+                <a
+                    href="{{ route('nightwatch.performance', array_merge(request()->except('range'), ['range' => 'all'])) }}"
+                    class="btn range-btn {{ $range === 'all' ? 'btn-dark' : 'btn-outline-dark' }}"
+                >
+                    All
+                </a>
+
+            </div>
+
+        </div>
 
     </div>
 
@@ -261,7 +311,7 @@
             </h5>
 
             <p class="text-muted">
-                Generate slow and critical requests to verify performance monitoring.
+                Generate slow and critical requests to test monitoring.
             </p>
 
             <div class="d-flex flex-wrap gap-2">
@@ -282,22 +332,6 @@
 
             </div>
 
-            <div class="mt-3 small text-muted">
-
-                Slow threshold:
-                <strong>
-                    {{ number_format((float) config('performance.slow_threshold_ms')) }} ms
-                </strong>
-
-                &nbsp; | &nbsp;
-
-                Critical threshold:
-                <strong>
-                    {{ number_format((float) config('performance.critical_threshold_ms')) }} ms
-                </strong>
-
-            </div>
-
         </div>
 
     </div>
@@ -313,12 +347,18 @@
                 action="{{ route('nightwatch.performance') }}"
             >
 
+                <input
+                    type="hidden"
+                    name="range"
+                    value="{{ $range }}"
+                >
+
                 <div class="row g-3">
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
 
                         <label class="form-label fw-semibold">
-                            Search Path / Route
+                            Search
                         </label>
 
                         <input
@@ -346,26 +386,16 @@
                                 All
                             </option>
 
-                            <option
-                                value="FAST"
-                                {{ $category === 'FAST' ? 'selected' : '' }}
-                            >
-                                FAST
-                            </option>
+                            @foreach(['FAST', 'SLOW', 'CRITICAL'] as $item)
 
-                            <option
-                                value="SLOW"
-                                {{ $category === 'SLOW' ? 'selected' : '' }}
-                            >
-                                SLOW
-                            </option>
+                                <option
+                                    value="{{ $item }}"
+                                    {{ $category === $item ? 'selected' : '' }}
+                                >
+                                    {{ $item }}
+                                </option>
 
-                            <option
-                                value="CRITICAL"
-                                {{ $category === 'CRITICAL' ? 'selected' : '' }}
-                            >
-                                CRITICAL
-                            </option>
+                            @endforeach
 
                         </select>
 
@@ -404,6 +434,36 @@
                     <div class="col-md-2">
 
                         <label class="form-label fw-semibold">
+                            HTTP Status
+                        </label>
+
+                        <select
+                            name="status"
+                            class="form-select"
+                        >
+
+                            <option value="ALL">
+                                All
+                            </option>
+
+                            @foreach($statuses as $httpStatus)
+
+                                <option
+                                    value="{{ $httpStatus }}"
+                                    {{ (string) $status === (string) $httpStatus ? 'selected' : '' }}
+                                >
+                                    {{ $httpStatus }}
+                                </option>
+
+                            @endforeach
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <label class="form-label fw-semibold">
                             Date
                         </label>
 
@@ -416,14 +476,87 @@
 
                     </div>
 
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-1 d-flex align-items-end">
 
                         <button
                             class="btn btn-primary w-100"
                             type="submit"
                         >
-                            🔎 Filter
+                            🔎
                         </button>
+
+                    </div>
+
+                </div>
+
+                <div class="row g-3 mt-1">
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-semibold">
+                            Sort
+                        </label>
+
+                        <select
+                            name="sort"
+                            class="form-select"
+                        >
+
+                            <option
+                                value="latest"
+                                {{ $sort === 'latest' ? 'selected' : '' }}
+                            >
+                                Latest
+                            </option>
+
+                            <option
+                                value="duration_high"
+                                {{ $sort === 'duration_high' ? 'selected' : '' }}
+                            >
+                                Duration: High → Low
+                            </option>
+
+                            <option
+                                value="duration_low"
+                                {{ $sort === 'duration_low' ? 'selected' : '' }}
+                            >
+                                Duration: Low → High
+                            </option>
+
+                            <option
+                                value="status"
+                                {{ $sort === 'status' ? 'selected' : '' }}
+                            >
+                                Status Code
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-3">
+
+                        <label class="form-label fw-semibold">
+                            Records Per Page
+                        </label>
+
+                        <select
+                            name="per_page"
+                            class="form-select"
+                        >
+
+                            @foreach([10, 15, 25, 50] as $number)
+
+                                <option
+                                    value="{{ $number }}"
+                                    {{ $perPage === $number ? 'selected' : '' }}
+                                >
+                                    {{ $number }}
+                                </option>
+
+                            @endforeach
+
+                        </select>
 
                     </div>
 
@@ -431,7 +564,7 @@
 
             </form>
 
-            <div class="mt-3">
+            <div class="mt-3 d-flex flex-wrap gap-2">
 
                 <a
                     href="{{ route('nightwatch.performance') }}"
@@ -440,10 +573,15 @@
                     Reset
                 </a>
 
-                <span class="text-muted ms-2">
+                <a
+                    href="{{ route('nightwatch.performance.export', request()->query()) }}"
+                    class="btn btn-sm btn-success"
+                >
+                    📥 Export CSV
+                </a>
 
+                <span class="text-muted ms-2 align-self-center">
                     {{ $totalRequests }} record(s)
-
                 </span>
 
             </div>
@@ -456,37 +594,11 @@
 
     <div class="card main-card">
 
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-white">
 
-            <div>
-
-                <h5 class="fw-bold mb-0">
-                    📈 Request Performance
-                </h5>
-
-                <small class="text-muted">
-                    Latest monitored application requests
-                </small>
-
-            </div>
-
-            <form
-                method="POST"
-                action="{{ route('nightwatch.performance.clear') }}"
-                onsubmit="return confirm('Clear all performance metrics?')"
-            >
-
-                @csrf
-                @method('DELETE')
-
-                <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-danger"
-                >
-                    🗑️ Clear
-                </button>
-
-            </form>
+            <h5 class="fw-bold mb-0">
+                📈 Request Performance
+            </h5>
 
         </div>
 
@@ -503,21 +615,13 @@
                             <tr>
 
                                 <th>#</th>
-
                                 <th>Request</th>
-
                                 <th>Route</th>
-
                                 <th>Method</th>
-
                                 <th>Status</th>
-
                                 <th>Duration</th>
-
                                 <th>Memory</th>
-
                                 <th>Category</th>
-
                                 <th>Time</th>
 
                             </tr>
@@ -590,7 +694,7 @@
 
                                         @php
 
-                                            $categoryBadge = match($record->category) {
+                                            $categoryBadge = match ($record->category) {
                                                 'CRITICAL' => 'danger',
                                                 'SLOW' => 'warning',
                                                 default => 'success',
@@ -599,7 +703,7 @@
                                         @endphp
 
                                         <span
-                                            class="badge bg-{{ $categoryBadge }} category-badge {{ $record->category === 'SLOW' ? 'text-dark' : '' }}"
+                                            class="badge bg-{{ $categoryBadge }} {{ $record->category === 'SLOW' ? 'text-dark' : '' }}"
                                         >
                                             {{ $record->category }}
                                         </span>
@@ -641,7 +745,7 @@
                     </h5>
 
                     <p class="text-muted">
-                        Open an application route or use one of the performance test buttons above.
+                        Open an application route or use the test buttons above.
                     </p>
 
                 </div>
@@ -657,3 +761,4 @@
 </body>
 
 </html>
+

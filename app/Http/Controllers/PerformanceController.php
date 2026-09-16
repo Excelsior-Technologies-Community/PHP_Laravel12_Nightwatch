@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\PerformanceMetric;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Illuminate\View\View;
 
 class PerformanceController extends Controller
@@ -21,6 +20,226 @@ class PerformanceController extends Controller
         $category = $request->input('category');
         $method = $request->input('method');
         $date = $request->input('date');
+        $range = $request->input('range', 'all');
+        $status = $request->input('status');
+        $sort = $request->input('sort', 'latest');
+        $perPage = (int) $request->input('per_page', 15);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Per Page
+        |--------------------------------------------------------------------------
+        */
+
+        if (!in_array($perPage, [10, 15, 25, 50], true)) {
+            $perPage = 15;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where(
+                    'path',
+                    'like',
+                    '%' . $search . '%'
+                )->orWhere(
+                    'route_name',
+                    'like',
+                    '%' . $search . '%'
+                );
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Category
+        |--------------------------------------------------------------------------
+        */
+
+        if ($category && $category !== 'ALL') {
+            $query->where('category', $category);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | HTTP Method
+        |--------------------------------------------------------------------------
+        */
+
+        if ($method && $method !== 'ALL') {
+            $query->where('method', $method);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status Code
+        |--------------------------------------------------------------------------
+        */
+
+        if ($status && $status !== 'ALL') {
+            $query->where('status_code', $status);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Exact Date
+        |--------------------------------------------------------------------------
+        */
+
+        if ($date) {
+            $query->whereDate('created_at', $date);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Date Range Presets
+        |--------------------------------------------------------------------------
+        */
+
+        $rangeStart = match ($range) {
+            'today' => now()->startOfDay(),
+            '7days' => now()->subDays(6)->startOfDay(),
+            '30days' => now()->subDays(29)->startOfDay(),
+            default => null,
+        };
+
+        if ($rangeStart) {
+            $query->where(
+                'created_at',
+                '>=',
+                $rangeStart
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sorting
+        |--------------------------------------------------------------------------
+        */
+
+        $filteredRecordsQuery = clone $query;
+
+        switch ($sort) {
+            case 'duration_high':
+                $filteredRecordsQuery->orderByDesc('duration_ms');
+                break;
+
+            case 'duration_low':
+                $filteredRecordsQuery->orderBy('duration_ms');
+                break;
+
+            case 'status':
+                $filteredRecordsQuery->orderBy('status_code');
+                break;
+
+            default:
+                $filteredRecordsQuery->latest();
+                break;
+        }
+
+        $filteredRecords = $filteredRecordsQuery
+            ->paginate($perPage)
+            ->withQueryString();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        $statsQuery = clone $query;
+
+        $totalRequests = (clone $statsQuery)->count();
+
+        $averageDuration = (clone $statsQuery)
+            ->avg('duration_ms') ?? 0;
+
+        $minimumDuration = (clone $statsQuery)
+            ->min('duration_ms') ?? 0;
+
+        $maximumDuration = (clone $statsQuery)
+            ->max('duration_ms') ?? 0;
+
+        $slowRequests = (clone $statsQuery)
+            ->where('category', 'SLOW')
+            ->count();
+
+        $criticalRequests = (clone $statsQuery)
+            ->where('category', 'CRITICAL')
+            ->count();
+
+        $fastRequests = (clone $statsQuery)
+            ->where('category', 'FAST')
+            ->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Methods
+        |--------------------------------------------------------------------------
+        */
+
+        $methods = PerformanceMetric::query()
+            ->select('method')
+            ->distinct()
+            ->orderBy('method')
+            ->pluck('method');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status Codes
+        |--------------------------------------------------------------------------
+        */
+
+        $statuses = PerformanceMetric::query()
+            ->select('status_code')
+            ->whereNotNull('status_code')
+            ->distinct()
+            ->orderBy('status_code')
+            ->pluck('status_code');
+
+        return view(
+            'nightwatch.performance',
+            compact(
+                'filteredRecords',
+                'search',
+                'category',
+                'method',
+                'date',
+                'range',
+                'status',
+                'sort',
+                'perPage',
+                'totalRequests',
+                'averageDuration',
+                'minimumDuration',
+                'maximumDuration',
+                'fastRequests',
+                'slowRequests',
+                'criticalRequests',
+                'methods',
+                'statuses'
+            )
+        );
+    }
+
+    /**
+     * Export performance metrics as CSV.
+     */
+    public function export(Request $request)
+    {
+        $query = PerformanceMetric::query();
+
+        $search = trim((string) $request->input('search'));
+        $category = $request->input('category');
+        $method = $request->input('method');
+        $date = $request->input('date');
+        $range = $request->input('range', 'all');
+        $status = $request->input('status');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -37,58 +256,64 @@ class PerformanceController extends Controller
             $query->where('method', $method);
         }
 
+        if ($status && $status !== 'ALL') {
+            $query->where('status_code', $status);
+        }
+
         if ($date) {
             $query->whereDate('created_at', $date);
         }
 
-        $filteredRecords = (clone $query)
+        $rangeStart = match ($range) {
+            'today' => now()->startOfDay(),
+            '7days' => now()->subDays(6)->startOfDay(),
+            '30days' => now()->subDays(29)->startOfDay(),
+            default => null,
+        };
+
+        if ($rangeStart) {
+            $query->where(
+                'created_at',
+                '>=',
+                $rangeStart
+            );
+        }
+
+        $records = $query
             ->latest()
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
-        $statsQuery = clone $query;
+        return response()->streamDownload(function () use ($records) {
+            $handle = fopen('php://output', 'w');
 
-        $totalRequests = (clone $statsQuery)->count();
+            fputcsv($handle, [
+                'ID',
+                'Path',
+                'Route',
+                'Method',
+                'Status Code',
+                'Duration (ms)',
+                'Memory (MB)',
+                'Category',
+                'Created At',
+            ]);
 
-        $averageDuration = (clone $statsQuery)->avg('duration_ms') ?? 0;
+            foreach ($records as $record) {
+                fputcsv($handle, [
+                    $record->id,
+                    $record->path,
+                    $record->route_name ?? 'N/A',
+                    $record->method,
+                    $record->status_code,
+                    $record->duration_ms,
+                    $record->memory_mb,
+                    $record->category,
+                    $record->created_at,
+                ]);
+            }
 
-        $minimumDuration = (clone $statsQuery)->min('duration_ms') ?? 0;
-
-        $maximumDuration = (clone $statsQuery)->max('duration_ms') ?? 0;
-
-        $slowRequests = (clone $statsQuery)
-            ->where('category', 'SLOW')
-            ->count();
-
-        $criticalRequests = (clone $statsQuery)
-            ->where('category', 'CRITICAL')
-            ->count();
-
-        $fastRequests = (clone $statsQuery)
-            ->where('category', 'FAST')
-            ->count();
-
-        $methods = PerformanceMetric::query()
-            ->select('method')
-            ->distinct()
-            ->orderBy('method')
-            ->pluck('method');
-
-        return view('nightwatch.performance', compact(
-            'filteredRecords',
-            'search',
-            'category',
-            'method',
-            'date',
-            'totalRequests',
-            'averageDuration',
-            'minimumDuration',
-            'maximumDuration',
-            'fastRequests',
-            'slowRequests',
-            'criticalRequests',
-            'methods'
-        ));
+            fclose($handle);
+        }, 'performance_metrics_' . now()->format('Y_m_d_H_i_s') . '.csv');
     }
 
     /**
@@ -102,7 +327,8 @@ class PerformanceController extends Controller
 
         sleep((int) floor($seconds));
 
-        $remainingMicroseconds = (int) (($seconds - floor($seconds)) * 1000000);
+        $remainingMicroseconds =
+            (int) (($seconds - floor($seconds)) * 1000000);
 
         if ($remainingMicroseconds > 0) {
             usleep($remainingMicroseconds);
@@ -121,17 +347,17 @@ class PerformanceController extends Controller
     /**
      * Generate a critical request for testing.
      */
-public function testCritical(): RedirectResponse
-{
-    sleep(4);
+    public function testCritical(): RedirectResponse
+    {
+        sleep(4);
 
-    return redirect()
-        ->route('nightwatch.performance')
-        ->with(
-            'success',
-            'Critical performance test completed.'
-        );
-}
+        return redirect()
+            ->route('nightwatch.performance')
+            ->with(
+                'success',
+                'Critical performance test completed.'
+            );
+    }
 
     /**
      * Clear all stored performance metrics.
