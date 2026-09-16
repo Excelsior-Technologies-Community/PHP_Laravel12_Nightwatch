@@ -30,7 +30,7 @@ Route::prefix('nightwatch')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Monitoring Dashboard
+    | Dashboard
     |--------------------------------------------------------------------------
     */
 
@@ -41,7 +41,7 @@ Route::prefix('nightwatch')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Log Viewer
+    | Logs
     |--------------------------------------------------------------------------
     */
 
@@ -49,6 +49,17 @@ Route::prefix('nightwatch')->group(function () {
         NightwatchMonitoringController::class,
         'logs'
     ])->name('nightwatch.logs');
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEW - Logs CSV Export
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/logs/export', [
+        NightwatchMonitoringController::class,
+        'exportLogs'
+    ])->name('nightwatch.logs.export');
 
     /*
     |--------------------------------------------------------------------------
@@ -78,7 +89,7 @@ Route::prefix('nightwatch')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Performance Monitoring
+    | Performance
     |--------------------------------------------------------------------------
     */
 
@@ -86,6 +97,17 @@ Route::prefix('nightwatch')->group(function () {
         PerformanceController::class,
         'index'
     ])->name('nightwatch.performance');
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEW - Performance CSV Export
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/performance/export', [
+        PerformanceController::class,
+        'export'
+    ])->name('nightwatch.performance.export');
 
     Route::get('/performance/test-slow', [
         PerformanceController::class,
