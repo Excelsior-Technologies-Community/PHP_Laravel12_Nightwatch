@@ -88,6 +88,7 @@ if (
                 'method' => $request->method(),
                 'path' => '/' . $path,
                 'route_name' => optional($request->route())->getName(),
+                'ip_address' => $request->ip(),
                 'status_code' => $statusCode,
                 'duration_ms' => round($durationMs, 3),
                 'memory_mb' => round($memoryMb, 3),

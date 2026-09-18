@@ -13,6 +13,7 @@ class PerformanceMetric extends Model
         'method',
         'path',
         'route_name',
+        'ip_address',
         'status_code',
         'duration_ms',
         'memory_mb',

@@ -3,1454 +3,721 @@
 
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Nightwatch Monitoring Dashboard</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightwatch Monitoring & APM Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body {
-            background: #f5f7fb;
+            background: #f1f5f9;
+            color: #1e293b;
+            font-family: system-ui, -apple-system, sans-serif;
         }
 
         .navbar-brand {
-            font-weight: 700;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
 
         .stat-card {
             border: 0;
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: #ffffff;
         }
 
         .stat-card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
+            width: 46px;
+            height: 46px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-size: 20px;
         }
 
         .section-card {
             border: 0;
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            background: #ffffff;
         }
 
-        .health-item {
-            border-radius: 12px;
-            padding: 15px;
-            background: #f8f9fa;
+        .telemetry-card {
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 16px;
+            transition: all 0.2s;
         }
 
-        .status-badge {
-            min-width: 55px;
-            display: inline-block;
-            text-align: center;
+        .telemetry-card:hover {
+            background: #ffffff;
+            border-color: #cbd5e1;
         }
 
         .metric-number {
-            font-size: 28px;
-            font-weight: 700;
+            font-size: 26px;
+            font-weight: 800;
         }
 
-        .table th {
-            white-space: nowrap;
-        }
-
-        .table td {
-            vertical-align: middle;
-        }
-
-        .url-cell {
-            max-width: 350px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .refresh-select {
-            width: 125px;
-        }
-
-        .progress {
-            height: 10px;
+        .progress-thin {
+            height: 8px;
             border-radius: 20px;
         }
 
-        .page-title {
-            font-weight: 700;
+        .badge-pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-right: 4px;
+            animation: blink 1.4s infinite;
         }
 
-        .small-muted {
-            color: #6c757d;
-            font-size: 13px;
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .threat-item {
+            border-left: 3px solid #ef4444;
+            background: #fff1f2;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+
+        .extension-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .url-cell {
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
 
 <body>
 
-<nav class="navbar navbar-expand-lg bg-dark navbar-dark shadow-sm">
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg bg-dark navbar-dark shadow-sm sticky-top">
     <div class="container-fluid px-4">
-
-        <a
-            class="navbar-brand"
-            href="{{ route('nightwatch.dashboard') }}"
-        >
-            🌙 Nightwatch
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('nightwatch.dashboard') }}">
+            <span>🌙</span>
+            <span>Nightwatch APM</span>
+            <span class="badge bg-primary text-white ms-1" style="font-size: 10px;">v12 Telemetry</span>
         </a>
 
-        <div class="d-flex align-items-center gap-2">
-
-            <a
-                href="{{ route('nightwatch.dashboard') }}"
-                class="btn btn-light btn-sm"
-            >
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <a href="{{ route('nightwatch.dashboard') }}" class="btn btn-light btn-sm fw-semibold">
                 Dashboard
             </a>
 
-            <a
-                href="{{ route('nightwatch.logs') }}"
-                class="btn btn-outline-light btn-sm"
-            >
+            <a href="{{ route('nightwatch.live-stream') }}" class="btn btn-outline-info btn-sm d-flex align-items-center gap-1">
+                <span class="badge-pulse"></span>
+                <span>Live Stream</span>
+            </a>
+
+            <a href="{{ route('nightwatch.logs') }}" class="btn btn-outline-light btn-sm">
                 Logs
             </a>
 
-            <a
-                href="{{ route('nightwatch.performance') }}"
-                class="btn btn-outline-light btn-sm"
-            >
+            <a href="{{ route('nightwatch.performance') }}" class="btn btn-outline-light btn-sm">
                 Performance
             </a>
 
-            <select
-                id="autoRefresh"
-                class="form-select form-select-sm refresh-select"
-                title="Dashboard auto refresh"
-            >
-                <option value="0">Refresh: Off</option>
-                <option value="30">Refresh: 30s</option>
-                <option value="60">Refresh: 60s</option>
-                <option value="120">Refresh: 2m</option>
-            </select>
-
+            <!-- Auto-Refresh Toggle -->
+            <div class="input-group input-group-sm ms-2" style="width: 170px;">
+                <span class="input-group-text bg-secondary border-secondary text-white small" id="refreshTimer">Off</span>
+                <select id="autoRefresh" class="form-select bg-dark text-white border-secondary" title="Auto Refresh Frequency">
+                    <option value="0">Off</option>
+                    <option value="5">5s Refresh</option>
+                    <option value="10">10s Refresh</option>
+                    <option value="30">30s Refresh</option>
+                </select>
+            </div>
         </div>
-
     </div>
 </nav>
 
-
 <div class="container-fluid px-4 py-4">
 
-    {{-- Page Header --}}
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
-
+    <!-- Header Title & Range Filter -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <h2 class="page-title mb-1">
-                Monitoring Dashboard
-            </h2>
-
-            <p class="text-muted mb-0">
-                Monitor Laravel application logs, health and performance.
+            <h3 class="fw-bold mb-1">Application Observability & APM</h3>
+            <p class="text-muted small mb-0">
+                Continuous performance tracing, system resource telemetry, and real-time security monitoring.
             </p>
         </div>
 
-        {{-- Date Range --}}
-        <form
-            method="GET"
-            action="{{ route('nightwatch.dashboard') }}"
-            class="d-flex align-items-center gap-2"
-        >
-
-            <label
-                for="range"
-                class="fw-semibold text-nowrap"
-            >
-                Date Range:
-            </label>
-
-            <select
-                name="range"
-                id="range"
-                class="form-select"
-                onchange="this.form.submit()"
-            >
-                <option
-                    value="today"
-                    {{ ($range ?? 'all') === 'today' ? 'selected' : '' }}
-                >
-                    Today
-                </option>
-
-                <option
-                    value="7"
-                    {{ ($range ?? 'all') === '7' ? 'selected' : '' }}
-                >
-                    Last 7 Days
-                </option>
-
-                <option
-                    value="30"
-                    {{ ($range ?? 'all') === '30' ? 'selected' : '' }}
-                >
-                    Last 30 Days
-                </option>
-
-                <option
-                    value="all"
-                    {{ ($range ?? 'all') === 'all' ? 'selected' : '' }}
-                >
-                    All
-                </option>
-            </select>
-
-        </form>
-
-    </div>
-
-
-    {{-- Selected Range --}}
-    <div class="alert alert-light border mb-4">
-
-        <strong>Showing data for:</strong>
-
-        @if (($range ?? 'all') === 'today')
-            Today
-        @elseif (($range ?? 'all') === '7')
-            Last 7 Days
-        @elseif (($range ?? 'all') === '30')
-            Last 30 Days
-        @else
-            All Available Data
-        @endif
-
-    </div>
-
-
-    {{-- Log Statistics --}}
-    <div class="row g-4 mb-4">
-
-        {{-- Total Logs --}}
-        <div class="col-xl-3 col-md-6">
-
-            <div class="card stat-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center">
-
-                        <div>
-                            <div class="text-muted mb-2">
-                                Total Logs
-                            </div>
-
-                            <div class="metric-number">
-                                {{ number_format($totalLogs) }}
-                            </div>
-                        </div>
-
-                        <div class="stat-icon bg-primary-subtle">
-                            📋
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- Errors --}}
-        <div class="col-xl-3 col-md-6">
-
-            <div class="card stat-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center">
-
-                        <div>
-                            <div class="text-muted mb-2">
-                                Errors
-                            </div>
-
-                            <div class="metric-number text-danger">
-                                {{ number_format($errorLogs) }}
-                            </div>
-                        </div>
-
-                        <div class="stat-icon bg-danger-subtle">
-                            ❌
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- Warnings --}}
-        <div class="col-xl-3 col-md-6">
-
-            <div class="card stat-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center">
-
-                        <div>
-                            <div class="text-muted mb-2">
-                                Warnings
-                            </div>
-
-                            <div class="metric-number text-warning">
-                                {{ number_format($warningLogs) }}
-                            </div>
-                        </div>
-
-                        <div class="stat-icon bg-warning-subtle">
-                            ⚠️
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- Info --}}
-        <div class="col-xl-3 col-md-6">
-
-            <div class="card stat-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center">
-
-                        <div>
-                            <div class="text-muted mb-2">
-                                Info
-                            </div>
-
-                            <div class="metric-number text-info">
-                                {{ number_format($infoLogs) }}
-                            </div>
-                        </div>
-
-                        <div class="stat-icon bg-info-subtle">
-                            ℹ️
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- Health Section --}}
-    <div class="card section-card mb-4">
-
-        <div class="card-body">
-
-            <div class="d-flex justify-content-between align-items-center mb-4">
-
-                <div>
-                    <h5 class="mb-1">
-                        🩺 Application Health
-                    </h5>
-
-                    <div class="small-muted">
-                        Current application infrastructure status
-                    </div>
-                </div>
-
-                <span
-                    class="badge
-                    {{ $healthCount === $healthTotal ? 'text-bg-success' : 'text-bg-warning' }}
-                    fs-6"
-                >
-                    {{ $healthCount }}/{{ $healthTotal }} Healthy
-                </span>
-
-            </div>
-
-
-            <div class="row g-3">
-
-                {{-- Application --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="health-item">
-
-                        <div class="d-flex justify-content-between">
-
-                            <strong>
-                                Application
-                            </strong>
-
-                            @if ($health['application'])
-                                <span class="text-success">
-                                    ✓
-                                </span>
-                            @else
-                                <span class="text-danger">
-                                    ✕
-                                </span>
-                            @endif
-
-                        </div>
-
-                        <small class="text-muted">
-                            Laravel application
-                        </small>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Database --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="health-item">
-
-                        <div class="d-flex justify-content-between">
-
-                            <strong>
-                                Database
-                            </strong>
-
-                            @if ($health['database'])
-                                <span class="text-success">
-                                    ✓
-                                </span>
-                            @else
-                                <span class="text-danger">
-                                    ✕
-                                </span>
-                            @endif
-
-                        </div>
-
-                        <small class="text-muted">
-                            Database connection
-                        </small>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Cache --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="health-item">
-
-                        <div class="d-flex justify-content-between">
-
-                            <strong>
-                                Cache
-                            </strong>
-
-                            @if ($health['cache'])
-                                <span class="text-success">
-                                    ✓
-                                </span>
-                            @else
-                                <span class="text-danger">
-                                    ✕
-                                </span>
-                            @endif
-
-                        </div>
-
-                        <small class="text-muted">
-                            Cache connection
-                        </small>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Storage --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="health-item">
-
-                        <div class="d-flex justify-content-between">
-
-                            <strong>
-                                Storage
-                            </strong>
-
-                            @if ($health['storage'])
-                                <span class="text-success">
-                                    ✓
-                                </span>
-                            @else
-                                <span class="text-danger">
-                                    ✕
-                                </span>
-                            @endif
-
-                        </div>
-
-                        <small class="text-muted">
-                            Storage writable
-                        </small>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- Performance Statistics --}}
-    <div class="card section-card mb-4">
-
-        <div class="card-body">
-
-            <div class="d-flex justify-content-between align-items-center mb-4">
-
-                <div>
-                    <h5 class="mb-1">
-                        ⚡ Performance Overview
-                    </h5>
-
-                    <div class="small-muted">
-                        Request performance for the selected date range
-                    </div>
-                </div>
-
-                <a
-                    href="{{ route('nightwatch.performance', ['range' => $range ?? 'all']) }}"
-                    class="btn btn-primary btn-sm"
-                >
-                    View Performance →
-                </a>
-
-            </div>
-
-
-            <div class="row g-4">
-
-                {{-- Total Requests --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="border rounded-3 p-3 h-100">
-
-                        <div class="text-muted">
-                            Total Requests
-                        </div>
-
-                        <div class="metric-number">
-                            {{ number_format($performanceTotal) }}
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Average --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="border rounded-3 p-3 h-100">
-
-                        <div class="text-muted">
-                            Average Duration
-                        </div>
-
-                        <div class="metric-number">
-                            {{ number_format($performanceAverage, 2) }} ms
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Slow --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="border rounded-3 p-3 h-100">
-
-                        <div class="text-muted">
-                            Slow Requests
-                        </div>
-
-                        <div class="metric-number text-warning">
-                            {{ number_format($slowRequests) }}
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                {{-- Critical --}}
-                <div class="col-xl-3 col-md-6">
-
-                    <div class="border rounded-3 p-3 h-100">
-
-                        <div class="text-muted">
-                            Critical Requests
-                        </div>
-
-                        <div class="metric-number text-danger">
-                            {{ number_format($criticalRequests) }}
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- Top Requested URLs + Status Distribution --}}
-    <div class="row g-4 mb-4">
-
-        {{-- Top Requested URLs --}}
-        <div class="col-xl-7">
-
-            <div class="card section-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-
-                        <div>
-                            <h5 class="mb-1">
-                                🔗 Top Requested URLs
-                            </h5>
-
-                            <div class="small-muted">
-                                Most frequently requested application paths
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                    @if ($topUrls->count())
-
-                        <div class="table-responsive">
-
-                            <table class="table table-hover align-middle mb-0">
-
-                                <thead class="table-light">
-
-                                    <tr>
-                                        <th>#</th>
-                                        <th>URL / Path</th>
-                                        <th>Requests</th>
-                                        <th>Avg Duration</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    @foreach ($topUrls as $index => $url)
-
-                                        <tr>
-
-                                            <td>
-                                                <strong>
-                                                    {{ $index + 1 }}
-                                                </strong>
-                                            </td>
-
-                                            <td>
-
-                                                <div
-                                                    class="url-cell"
-                                                    title="{{ $url->path }}"
-                                                >
-                                                    <code>
-                                                        {{ $url->path }}
-                                                    </code>
-                                                </div>
-
-                                            </td>
-
-                                            <td>
-                                                <span class="badge text-bg-primary">
-                                                    {{ number_format($url->requests) }}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                {{ number_format((float) $url->avg_duration, 2) }}
-                                                ms
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    @else
-
-                        <div class="text-center text-muted py-5">
-                            No URL request data available for this range.
-                        </div>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- HTTP Status Distribution --}}
-        <div class="col-xl-5">
-
-            <div class="card section-card h-100">
-
-                <div class="card-body">
-
-                    <h5 class="mb-1">
-                        📊 HTTP Status Distribution
-                    </h5>
-
-                    <div class="small-muted mb-4">
-                        Requests grouped by HTTP status class
-                    </div>
-
-
-                    @php
-                        $statusLabels = [
-                            '2xx' => '2xx Success',
-                            '3xx' => '3xx Redirect',
-                            '4xx' => '4xx Client Error',
-                            '5xx' => '5xx Server Error',
-                        ];
-
-                        $statusClasses = [
-                            '2xx' => 'bg-success',
-                            '3xx' => 'bg-info',
-                            '4xx' => 'bg-warning',
-                            '5xx' => 'bg-danger',
-                        ];
-
-                        $statusTotalSafe = max(1, $statusTotal);
-                    @endphp
-
-
-                    @foreach ($statusDistribution as $statusGroup => $count)
-
-                        @php
-                            $percentage = ($count / $statusTotalSafe) * 100;
-                        @endphp
-
-                        <div class="mb-4">
-
-                            <div class="d-flex justify-content-between mb-2">
-
-                                <span>
-                                    {{ $statusLabels[$statusGroup] ?? $statusGroup }}
-                                </span>
-
-                                <strong>
-                                    {{ number_format($count) }}
-                                    ({{ number_format($percentage, 1) }}%)
-                                </strong>
-
-                            </div>
-
-                            <div class="progress">
-
-                                <div
-                                    class="progress-bar {{ $statusClasses[$statusGroup] ?? 'bg-secondary' }}"
-                                    role="progressbar"
-                                    style="width: {{ $percentage }}%"
-                                    aria-valuenow="{{ $percentage }}"
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                ></div>
-
-                            </div>
-
-                        </div>
-
-                    @endforeach
-
-
-                    @if ($statusTotal === 0)
-
-                        <div class="text-center text-muted py-3">
-                            No HTTP status data available.
-                        </div>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- Recent + Slowest Requests --}}
-    <div class="row g-4 mb-4">
-
-        {{-- Recent Performance --}}
-        <div class="col-xl-6">
-
-            <div class="card section-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-
-                        <div>
-
-                            <h5 class="mb-1">
-                                🕒 Recent Requests
-                            </h5>
-
-                            <div class="small-muted">
-                                Latest monitored requests
-                            </div>
-
-                        </div>
-
-                        <a
-                            href="{{ route('nightwatch.performance', ['range' => $range ?? 'all']) }}"
-                            class="btn btn-outline-primary btn-sm"
-                        >
-                            View All
+        <div class="d-flex align-items-center gap-2">
+            <form method="GET" action="{{ route('nightwatch.dashboard') }}" class="d-flex gap-2">
+                <select name="range" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="today" {{ $range === 'today' ? 'selected' : '' }}>Today</option>
+                    <option value="7" {{ $range === '7' ? 'selected' : '' }}>Last 7 Days</option>
+                    <option value="30" {{ $range === '30' ? 'selected' : '' }}>Last 30 Days</option>
+                    <option value="all" {{ $range === 'all' ? 'selected' : '' }}>All Time</option>
+                </select>
+            </form>
+
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    ⚡ Generate Test Events
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li>
+                        <form method="POST" action="{{ route('nightwatch.test.info') }}">
+                            @csrf
+                            <button type="submit" class="dropdown-item small">Info Log with Masking</button>
+                        </form>
+                    </li>
+                    <li>
+                        <form method="POST" action="{{ route('nightwatch.test.warning') }}">
+                            @csrf
+                            <button type="submit" class="dropdown-item small">Warning Log</button>
+                        </form>
+                    </li>
+                    <li>
+                        <form method="POST" action="{{ route('nightwatch.test.exception') }}">
+                            @csrf
+                            <button type="submit" class="dropdown-item small text-danger">Test Exception</button>
+                        </form>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a href="{{ route('nightwatch.performance.test-slow') }}" class="dropdown-item small text-warning">
+                            Slow Request (2s)
                         </a>
-
-                    </div>
-
-
-                    @if ($recentPerformance->count())
-
-                        <div class="table-responsive">
-
-                            <table class="table table-hover align-middle mb-0">
-
-                                <thead class="table-light">
-
-                                    <tr>
-                                        <th>Request</th>
-                                        <th>Status</th>
-                                        <th>Duration</th>
-                                        <th>Category</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    @foreach ($recentPerformance as $metric)
-
-                                        <tr>
-
-                                            <td>
-
-                                                <div>
-                                                    <span class="badge text-bg-secondary">
-                                                        {{ $metric->method }}
-                                                    </span>
-                                                </div>
-
-                                                <div
-                                                    class="url-cell mt-1"
-                                                    title="{{ $metric->path }}"
-                                                >
-                                                    <code>
-                                                        {{ $metric->path }}
-                                                    </code>
-                                                </div>
-
-                                            </td>
-
-
-                                            <td>
-
-                                                @if ($metric->status_code >= 500)
-
-                                                    <span class="badge text-bg-danger status-badge">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @elseif ($metric->status_code >= 400)
-
-                                                    <span class="badge text-bg-warning status-badge">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @elseif ($metric->status_code >= 300)
-
-                                                    <span class="badge text-bg-info status-badge">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @else
-
-                                                    <span class="badge text-bg-success status-badge">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @endif
-
-                                            </td>
-
-
-                                            <td>
-                                                <strong>
-                                                    {{ number_format($metric->duration_ms, 2) }}
-                                                </strong>
-                                                ms
-                                            </td>
-
-
-                                            <td>
-
-                                                @if ($metric->category === 'CRITICAL')
-
-                                                    <span class="badge text-bg-danger">
-                                                        CRITICAL
-                                                    </span>
-
-                                                @elseif ($metric->category === 'SLOW')
-
-                                                    <span class="badge text-bg-warning">
-                                                        SLOW
-                                                    </span>
-
-                                                @else
-
-                                                    <span class="badge text-bg-success">
-                                                        FAST
-                                                    </span>
-
-                                                @endif
-
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    @else
-
-                        <div class="text-center text-muted py-5">
-                            No performance metrics available.
-                        </div>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- Slowest Requests --}}
-        <div class="col-xl-6">
-
-            <div class="card section-card h-100">
-
-                <div class="card-body">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-
-                        <div>
-
-                            <h5 class="mb-1">
-                                🐢 Slowest Requests
-                            </h5>
-
-                            <div class="small-muted">
-                                Requests with the highest response duration
-                            </div>
-
-                        </div>
-
-                        <a
-                            href="{{ route('nightwatch.performance', [
-                                'range' => $range ?? 'all',
-                                'sort' => 'duration_desc'
-                            ]) }}"
-                            class="btn btn-outline-danger btn-sm"
-                        >
-                            View Slowest
+                    </li>
+                    <li>
+                        <a href="{{ route('nightwatch.performance.test-critical') }}" class="dropdown-item small text-danger">
+                            Critical Request (4s)
                         </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
 
-                    </div>
+    <!-- Alert Messages -->
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show small" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
-
-                    @if ($slowestRequests->count())
-
-                        <div class="table-responsive">
-
-                            <table class="table table-hover align-middle mb-0">
-
-                                <thead class="table-light">
-
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Request</th>
-                                        <th>Status</th>
-                                        <th>Duration</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    @foreach ($slowestRequests as $index => $metric)
-
-                                        <tr>
-
-                                            <td>
-                                                <strong>
-                                                    {{ $index + 1 }}
-                                                </strong>
-                                            </td>
-
-
-                                            <td>
-
-                                                <span class="badge text-bg-secondary">
-                                                    {{ $metric->method }}
-                                                </span>
-
-                                                <div
-                                                    class="url-cell mt-1"
-                                                    title="{{ $metric->path }}"
-                                                >
-                                                    <code>
-                                                        {{ $metric->path }}
-                                                    </code>
-                                                </div>
-
-                                            </td>
-
-
-                                            <td>
-
-                                                @if ($metric->status_code >= 500)
-
-                                                    <span class="badge text-bg-danger">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @elseif ($metric->status_code >= 400)
-
-                                                    <span class="badge text-bg-warning">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @else
-
-                                                    <span class="badge text-bg-success">
-                                                        {{ $metric->status_code }}
-                                                    </span>
-
-                                                @endif
-
-                                            </td>
-
-
-                                            <td>
-
-                                                <strong class="text-danger">
-                                                    {{ number_format($metric->duration_ms, 2) }}
-                                                    ms
-                                                </strong>
-
-                                            </td>
-
-                                        </tr>
-
-                                    @endforeach
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    @else
-
-                        <div class="text-center text-muted py-5">
-                            No performance metrics available.
-                        </div>
-
-                    @endif
-
+    <!-- SECTION 1: Server & System Resource Telemetry -->
+    <div class="row g-3 mb-4">
+        <!-- CPU Usage Gauge -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">CPU UTILIZATION</span>
+                    <span class="badge {{ $telemetry['cpu']['percentage'] > 80 ? 'bg-danger' : ($telemetry['cpu']['percentage'] > 60 ? 'bg-warning text-dark' : 'bg-success') }} rounded-pill px-2 py-1" style="font-size: 10px;">
+                        {{ $telemetry['cpu']['status'] }}
+                    </span>
                 </div>
-
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="metric-number text-dark" id="cpuVal">{{ $telemetry['cpu']['percentage'] }}%</span>
+                    <span class="text-muted small">({{ $telemetry['cpu']['cores'] }} Cores)</span>
+                </div>
+                <div class="progress progress-thin bg-light">
+                    <div id="cpuBar" class="progress-bar {{ $telemetry['cpu']['percentage'] > 80 ? 'bg-danger' : 'bg-primary' }}" style="width: {{ $telemetry['cpu']['percentage'] }}%"></div>
+                </div>
+                <div class="text-muted small mt-2" style="font-size: 11px;">Active OS Processor load</div>
             </div>
-
         </div>
 
-    </div>
-
-
-    {{-- Monitoring Test Tools --}}
-    <div class="card section-card mb-4">
-
-        <div class="card-body">
-
-            <h5 class="mb-1">
-                🧪 Monitoring Test Tools
-            </h5>
-
-            <p class="text-muted mb-4">
-                Generate test logs and performance metrics to verify Nightwatch monitoring.
-            </p>
-
-
-            <div class="d-flex flex-wrap gap-2">
-
-                {{-- Info --}}
-                <form
-                    method="POST"
-                    action="{{ route('nightwatch.test.info') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="btn btn-info"
-                    >
-                        ℹ️ Generate Info
-                    </button>
-                </form>
-
-
-                {{-- Warning --}}
-                <form
-                    method="POST"
-                    action="{{ route('nightwatch.test.warning') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="btn btn-warning"
-                    >
-                        ⚠️ Generate Warning
-                    </button>
-                </form>
-
-
-                {{-- Exception --}}
-                <form
-                    method="POST"
-                    action="{{ route('nightwatch.test.exception') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="btn btn-danger"
-                    >
-                        ❌ Generate Exception
-                    </button>
-                </form>
-
-
-                {{-- All Logs --}}
-                <form
-                    method="POST"
-                    action="{{ route('nightwatch.test.all') }}"
-                >
-                    @csrf
-
-                    <button
-                        type="submit"
-                        class="btn btn-dark"
-                    >
-                        🚀 Generate All Test Logs
-                    </button>
-                </form>
-
-
-                {{-- Slow Request --}}
-                <a
-                    href="{{ route('nightwatch.performance.test-slow') }}"
-                    class="btn btn-outline-warning"
-                >
-                    🐢 Test Slow Request
-                </a>
-
-
-                {{-- Critical Request --}}
-                <a
-                    href="{{ route('nightwatch.performance.test-critical') }}"
-                    class="btn btn-outline-danger"
-                >
-                    🔥 Test Critical Request
-                </a>
-
+        <!-- RAM Usage -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">RAM / MEMORY USAGE</span>
+                    <span class="badge {{ $telemetry['ram']['percentage'] > 85 ? 'bg-danger' : 'bg-info' }} rounded-pill px-2 py-1" style="font-size: 10px;">
+                        {{ $telemetry['ram']['percentage'] }}%
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="metric-number text-dark" id="ramVal">{{ $telemetry['ram']['used_gb'] }} GB</span>
+                    <span class="text-muted small">/ {{ $telemetry['ram']['total_gb'] }} GB</span>
+                </div>
+                <div class="progress progress-thin bg-light">
+                    <div id="ramBar" class="progress-bar bg-info" style="width: {{ $telemetry['ram']['percentage'] }}%"></div>
+                </div>
+                <div class="text-muted small mt-2" style="font-size: 11px;">Free: {{ $telemetry['ram']['free_gb'] }} GB physical RAM</div>
             </div>
-
         </div>
 
+        <!-- Disk Storage & Inodes -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">STORAGE DISK CAPACITY</span>
+                    <span class="badge {{ $telemetry['disk']['percentage'] > 85 ? 'bg-danger' : 'bg-primary' }} rounded-pill px-2 py-1" style="font-size: 10px;">
+                        {{ $telemetry['disk']['percentage'] }}% Used
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="metric-number text-dark" id="diskVal">{{ $telemetry['disk']['used_gb'] }} GB</span>
+                    <span class="text-muted small">/ {{ $telemetry['disk']['total_gb'] }} GB</span>
+                </div>
+                <div class="progress progress-thin bg-light">
+                    <div id="diskBar" class="progress-bar bg-primary" style="width: {{ $telemetry['disk']['percentage'] }}%"></div>
+                </div>
+                <div class="text-muted small mt-2" style="font-size: 11px;">Free Disk Space: {{ $telemetry['disk']['free_gb'] }} GB</div>
+            </div>
+        </div>
+
+        <!-- PHP OPcache & Extensions Health -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">PHP & OPCACHE HEALTH</span>
+                    <span class="badge {{ $telemetry['opcache']['enabled'] ? 'bg-success' : 'bg-secondary' }} rounded-pill px-2 py-1" style="font-size: 10px;">
+                        {{ $telemetry['opcache']['enabled'] ? 'OPcache Active' : 'OPcache Off' }}
+                    </span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="metric-number text-dark">{{ $telemetry['opcache']['hit_rate'] }}%</span>
+                    <span class="text-muted small">Cache Hit Rate</span>
+                </div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge bg-light text-dark border" style="font-size: 10px;">PHP {{ $telemetry['environment']['php_version'] }}</span>
+                    <span class="badge bg-light text-dark border" style="font-size: 10px;">Limit {{ $telemetry['environment']['memory_limit'] }}</span>
+                    <span class="badge bg-light text-success border border-success" style="font-size: 10px;">{{ $telemetry['extensions']['loaded_count'] }}/{{ $telemetry['extensions']['total_count'] }} Exts OK</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-
-    {{-- Recent Errors --}}
-    <div class="card section-card mb-4">
-
-        <div class="card-body">
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-
+    <!-- SECTION 2: Core KPI Metrics (Logs & Latency) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card p-3 d-flex align-items-center justify-content-between">
                 <div>
+                    <div class="text-muted small fw-semibold">TOTAL REQUESTS</div>
+                    <div class="metric-number text-dark">{{ number_format($performanceTotal) }}</div>
+                    <div class="small text-muted">{{ $fastRequests }} Fast (<500ms)</div>
+                </div>
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">⚡</div>
+            </div>
+        </div>
 
-                    <h5 class="mb-1">
-                        🚨 Recent Errors
-                    </h5>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold">AVERAGE LATENCY</div>
+                    <div class="metric-number text-dark">{{ number_format($performanceAverage, 1) }} ms</div>
+                    <div class="small text-muted">Max: {{ number_format($performanceMax, 1) }} ms</div>
+                </div>
+                <div class="stat-icon bg-info bg-opacity-10 text-info">⏱️</div>
+            </div>
+        </div>
 
-                    <div class="small-muted">
-                        Latest application errors in the selected range
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold">SLOW & CRITICAL</div>
+                    <div class="metric-number text-warning">{{ $slowRequests + $criticalRequests }}</div>
+                    <div class="small text-muted">{{ $criticalRequests }} Critical (>3000ms)</div>
+                </div>
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">⚠️</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold">APPLICATION ERRORS</div>
+                    <div class="metric-number text-danger">{{ $errorLogs }}</div>
+                    <div class="small text-muted">{{ $totalLogs }} Total Log Entries</div>
+                </div>
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger">🚨</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Chart.js Interactive Visual Analytics -->
+    <div class="row g-4 mb-4">
+        <!-- 24-Hour Request Volume & Latency Trend -->
+        <div class="col-12 col-xl-8">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Hourly Request Volume & Latency Trend (24h)</h5>
+                        <div class="text-muted small">Dual-axis correlation of traffic throughput vs response speed</div>
                     </div>
+                    <span class="badge bg-light text-dark border">Chart.js Live</span>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
 
+        <!-- HTTP Status Code Breakdown -->
+        <div class="col-12 col-xl-4">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">HTTP Status Codes</h5>
+                        <div class="text-muted small">Distribution of response classes</div>
+                    </div>
+                    <span class="badge bg-light text-dark border">{{ $statusTotal }} Total</span>
+                </div>
+                <div style="height: 240px; position: relative;" class="d-flex align-items-center justify-content-center">
+                    <canvas id="statusDonutChart"></canvas>
+                </div>
+                <div class="d-flex justify-content-around text-center mt-3 pt-2 border-top small">
+                    <div><strong class="text-success">{{ $statusDistribution['2xx'] }}</strong><br><span class="text-muted">2xx OK</span></div>
+                    <div><strong class="text-info">{{ $statusDistribution['3xx'] }}</strong><br><span class="text-muted">3xx Redir</span></div>
+                    <div><strong class="text-warning">{{ $statusDistribution['4xx'] }}</strong><br><span class="text-muted">4xx Client</span></div>
+                    <div><strong class="text-danger">{{ $statusDistribution['5xx'] }}</strong><br><span class="text-muted">5xx Server</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: Top 10 Slowest Routes & Security Threat Detector -->
+    <div class="row g-4 mb-4">
+        <!-- Top 10 Slowest Routes Bar Chart -->
+        <div class="col-12 col-xl-6">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Top Slowest Endpoints</h5>
+                        <div class="text-muted small">Ranked by average latency duration (ms)</div>
+                    </div>
+                    <a href="{{ route('nightwatch.performance') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="slowestRoutesChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security & 404/403 Brute-Force Scanner Detector -->
+        <div class="col-12 col-xl-6">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                            <span>🛡️ 404/403 Threat & Exploit Scanner</span>
+                            @if($totalSecurityEvents > 0)
+                                <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size: 10px;">{{ $totalSecurityEvents }} Events</span>
+                            @else
+                                <span class="badge bg-success rounded-pill px-2 py-1" style="font-size: 10px;">Secure</span>
+                            @endif
+                        </h5>
+                        <div class="text-muted small">Identifies suspicious client IPs and malicious probe attempts</div>
+                    </div>
                 </div>
 
-                <a
-                    href="{{ route('nightwatch.logs', [
-                        'level' => 'error',
-                        'range' => $range ?? 'all'
-                    ]) }}"
-                    class="btn btn-outline-danger btn-sm"
-                >
-                    View Error Logs
-                </a>
+                @if($threatIps->isEmpty() && $suspiciousPaths->isEmpty())
+                    <div class="text-center py-4 text-muted">
+                        <div style="font-size: 32px;">✅</div>
+                        <div class="fw-semibold mt-2">No suspicious 4xx/5xx security anomalies detected</div>
+                        <div class="small">All client traffic aligns with standard application routes.</div>
+                    </div>
+                @else
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold small text-muted text-uppercase mb-2">Top Suspicious IPs</h6>
+                            <div class="d-flex flex-column gap-2">
+                                @foreach($threatIps as $threat)
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light border">
+                                        <div>
+                                            <span class="fw-bold font-monospace small">{{ $threat->ip_address }}</span>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger ms-1" style="font-size: 9px;">HTTP {{ $threat->last_status }}</span>
+                                        </div>
+                                        <span class="badge bg-dark text-white rounded-pill">{{ $threat->total_anomalies }} hits</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
 
-            </div>
-
-
-            @if ($recentErrors->count())
-
-                <div class="table-responsive">
-
-                    <table class="table table-hover align-middle mb-0">
-
-                        <thead class="table-light">
-
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Level</th>
-                                <th>Message</th>
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            @foreach ($recentErrors as $error)
-
-                                <tr>
-
-                                    <td class="text-nowrap">
-                                        {{ $error['datetime'] ?? $error['date'] ?? '-' }}
-                                    </td>
-
-
-                                    <td>
-
-                                        <span class="badge text-bg-danger">
-                                            {{ strtoupper($error['level'] ?? 'ERROR') }}
+                        <div class="col-md-6">
+                            <h6 class="fw-bold small text-muted text-uppercase mb-2">Top Scanned Probe Paths</h6>
+                            <div class="d-flex flex-column gap-2">
+                                @foreach($suspiciousPaths as $pathItem)
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light border">
+                                        <span class="text-truncate font-monospace small" style="max-width: 140px;" title="{{ $pathItem->path }}">
+                                            {{ $pathItem->path }}
                                         </span>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge bg-warning text-dark" style="font-size: 10px;">{{ $pathItem->status_code }}</span>
+                                            <span class="badge bg-secondary rounded-pill">{{ $pathItem->attempts }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
-                                    </td>
+                <div class="mt-3 pt-2 border-top text-muted small d-flex justify-content-between align-items-center">
+                    <span>Sensitive Data Masking is active on all logs</span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">Masking: ON</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- SECTION 5: Recent Errors & Infrastructure Health -->
+    <div class="row g-4">
+        <!-- Recent Errors with Sensitive Data Masking -->
+        <div class="col-12 col-xl-8">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Recent Exception Logs (Masked)</h5>
+                        <div class="text-muted small">Passwords, Bearer tokens, and secrets are auto-redacted</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('nightwatch.live-stream') }}" class="btn btn-sm btn-outline-info">⚡ Live Stream</a>
+                        <a href="{{ route('nightwatch.logs') }}" class="btn btn-sm btn-outline-secondary">View All Logs</a>
+                    </div>
+                </div>
 
-                                    <td>
-                                        {{ $error['message'] ?? '-' }}
-                                    </td>
-
+                @if($recentErrors->isEmpty())
+                    <div class="text-center py-4 text-muted">
+                        <div style="font-size: 32px;">🎉</div>
+                        <div class="fw-semibold mt-2">Zero Application Errors Logged</div>
+                        <div class="small">The application is running smoothly with no active exceptions.</div>
+                    </div>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Level</th>
+                                    <th>Masked Message</th>
                                 </tr>
-
-                            @endforeach
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            @else
-
-                <div class="text-center text-muted py-5">
-                    🎉 No errors found for the selected date range.
-                </div>
-
-            @endif
-
+                            </thead>
+                            <tbody>
+                                @foreach($recentErrors as $err)
+                                    <tr>
+                                        <td class="text-muted font-monospace text-nowrap">{{ $err['datetime'] }}</td>
+                                        <td><span class="badge bg-danger">ERROR</span></td>
+                                        <td class="text-break">{{ $err['message'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
         </div>
 
+        <!-- Infrastructure & PHP Extension Status -->
+        <div class="col-12 col-xl-4">
+            <div class="section-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">PHP Extension Matrix</h5>
+                    <span class="badge bg-light text-dark border">Laravel 12 Specs</span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    @foreach($telemetry['extensions']['list'] as $ext)
+                        <span class="extension-chip {{ $ext['loaded'] ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25' }}">
+                            <span>{{ $ext['loaded'] ? '✓' : '✗' }}</span>
+                            <span>{{ $ext['name'] }}</span>
+                        </span>
+                    @endforeach
+                </div>
+
+                <h6 class="fw-bold small text-muted text-uppercase mb-2">Core Service Checks</h6>
+                <div class="d-flex flex-column gap-2 small">
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                        <span>Database PDO Connection</span>
+                        <span class="badge {{ $health['database'] ? 'bg-success' : 'bg-danger' }}">{{ $health['database'] ? 'CONNECTED' : 'DISCONNECTED' }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                        <span>Cache Read/Write Driver</span>
+                        <span class="badge {{ $health['cache'] ? 'bg-success' : 'bg-danger' }}">{{ $health['cache'] ? 'OPERATIONAL' : 'FAILED' }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                        <span>Local Storage Disk</span>
+                        <span class="badge {{ $health['storage'] ? 'bg-success' : 'bg-danger' }}">{{ $health['storage'] ? 'WRITABLE' : 'UNWRITABLE' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-
-    {{-- Footer --}}
-    <div class="text-center text-muted py-3">
-
-        <small>
-            Laravel Nightwatch Monitoring Dashboard
-            &middot;
-            Auto-refresh:
-            <span id="refreshStatus">
-                Off
-            </span>
-        </small>
-
-    </div>
-
 </div>
 
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- Chart.js Setup & Auto-Refresh Controller -->
 <script>
+    // 1. Dual-Axis 24-Hour Hourly Trend Chart
+    const hourlyData = @json($hourlyData);
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    const trendChart = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+            labels: hourlyData.labels,
+            datasets: [
+                {
+                    label: 'Request Volume',
+                    data: hourlyData.volume,
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    yAxisID: 'yVolume',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Avg Latency (ms)',
+                    data: hourlyData.latency,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    fill: true,
+                    yAxisID: 'yLatency',
+                    pointRadius: 3,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                yVolume: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Requests', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    beginAtZero: true
+                },
+                yLatency: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Latency (ms)', font: { size: 11 } },
+                    grid: { drawOnChartArea: false },
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 12 } } }
+            }
+        }
+    });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard Auto Refresh
-    |--------------------------------------------------------------------------
-    */
+    // 2. HTTP Status Code Doughnut Chart
+    const statusDist = @json($statusDistribution);
+    const ctxStatus = document.getElementById('statusDonutChart').getContext('2d');
+    const statusChart = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+            labels: ['2xx OK', '3xx Redir', '4xx Client', '5xx Server'],
+            datasets: [{
+                data: [statusDist['2xx'], statusDist['3xx'], statusDist['4xx'], statusDist['5xx']],
+                backgroundColor: ['#10b981', '#0ea5e9', '#f59e0b', '#ef4444'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
 
-    const autoRefreshSelect = document.getElementById('autoRefresh');
-    const refreshStatus = document.getElementById('refreshStatus');
+    // 3. Top 10 Slowest Routes Bar Chart
+    const slowestData = @json($top10SlowestRoutes);
+    const ctxSlow = document.getElementById('slowestRoutesChart').getContext('2d');
+    const slowChart = new Chart(ctxSlow, {
+        type: 'bar',
+        data: {
+            labels: slowestData.labels.length ? slowestData.labels : ['No requests yet'],
+            datasets: [{
+                label: 'Avg Duration (ms)',
+                data: slowestData.avg_duration.length ? slowestData.avg_duration : [0],
+                backgroundColor: '#ef4444',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { beginAtZero: true, title: { display: true, text: 'Duration (ms)', font: { size: 11 } } },
+                y: { ticks: { font: { size: 11 } } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
 
-    const refreshStorageKey = 'nightwatch_auto_refresh_seconds';
+    // 4. Auto-Refresh Controller
+    let refreshTimerInterval = null;
+    let secondsLeft = 0;
+    const selectElem = document.getElementById('autoRefresh');
+    const timerBadge = document.getElementById('refreshTimer');
 
-    const savedRefresh = localStorage.getItem(refreshStorageKey);
-
-    if (savedRefresh !== null) {
-        autoRefreshSelect.value = savedRefresh;
-    }
-
-    function updateRefreshStatus() {
-
-        const seconds = parseInt(autoRefreshSelect.value, 10);
-
-        if (seconds === 0) {
-
-            refreshStatus.textContent = 'Off';
-
+    function applyAutoRefresh(seconds) {
+        if (refreshTimerInterval) clearInterval(refreshTimerInterval);
+        if (seconds <= 0) {
+            timerBadge.innerText = 'Off';
             return;
         }
 
-        if (seconds < 60) {
+        secondsLeft = seconds;
+        timerBadge.innerText = secondsLeft + 's';
 
-            refreshStatus.textContent = seconds + ' seconds';
+        refreshTimerInterval = setInterval(() => {
+            secondsLeft--;
+            timerBadge.innerText = secondsLeft + 's';
 
-        } else {
-
-            refreshStatus.textContent = (seconds / 60) + ' minute(s)';
-
-        }
-
+            if (secondsLeft <= 0) {
+                // Poll live telemetry API or reload
+                window.location.reload();
+            }
+        }, 1000);
     }
 
-    autoRefreshSelect.addEventListener('change', function () {
-
-        const seconds = parseInt(this.value, 10);
-
-        localStorage.setItem(
-            refreshStorageKey,
-            seconds
-        );
-
-        updateRefreshStatus();
-
-        if (seconds > 0) {
-
-            window.location.reload();
-
-        }
-
+    selectElem.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value);
+        localStorage.setItem('nightwatch_refresh_interval', val);
+        applyAutoRefresh(val);
     });
 
-    updateRefreshStatus();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Auto Reload
-    |--------------------------------------------------------------------------
-    */
-
-    const refreshSeconds = parseInt(
-        autoRefreshSelect.value,
-        10
-    );
-
-    if (refreshSeconds > 0) {
-
-        setTimeout(function () {
-
-            window.location.reload();
-
-        }, refreshSeconds * 1000);
-
-    }
-
+    // Restore saved refresh preference
+    const savedRefresh = parseInt(localStorage.getItem('nightwatch_refresh_interval') || 0);
+    selectElem.value = savedRefresh;
+    applyAutoRefresh(savedRefresh);
 </script>
-
 </body>
 </html>
